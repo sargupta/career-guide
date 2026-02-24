@@ -1,0 +1,69 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+env:
+  PROJECT_ID: career-guide-488304
+  REGION: asia-south1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Google Auth
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Authorize Docker
+        run: |
+          gcloud auth configure-docker gcr.io
+
+      - name: Build and Push Images
+        run: |
+          # Use gcloud builds submit for parallel builds as we did locally
+          gcloud builds submit --config=cloudbuild.yaml .
+
+      - name: Deploy Services
+        run: |
+          # Deploy Backend
+          gcloud run deploy sargvision-api \
+            --image gcr.io/${{ env.PROJECT_ID }}/sargvision-api \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars ENV=prod \
+            --set-secrets "SUPABASE_DB_URL=SUPABASE_DB_URL:latest,GOOGLE_API_KEY=GOOGLE_API_KEY:latest,TWILIO_ACCOUNT_SID=TWILIO_ACCOUNT_SID:latest,TWILIO_AUTH_TOKEN=TWILIO_AUTH_TOKEN:latest,TWILIO_WHATSAPP_NUMBER=TWILIO_WHATSAPP_NUMBER:latest" \
+            --port 8080 \
+            --memory 1024Mi \
+            --cpu 1
+
+          # Deploy Gateway
+          gcloud run deploy sargvision-gateway \
+            --image gcr.io/${{ env.PROJECT_ID }}/sargvision-gateway \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1 \
+            --port 8000
+
+          # Deploy Frontend
+          gcloud run deploy sargvision-frontend \
+            --image gcr.io/${{ env.PROJECT_ID }}/sargvision-frontend \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1
