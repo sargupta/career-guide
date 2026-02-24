@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Build artifacts
+.next/
+out/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+.pytest_cache/
+htmlcov/
+
+# Supabase
+supabase/.temp/

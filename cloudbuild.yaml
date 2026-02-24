@@ -1,0 +1,42 @@
+steps:
+  # 0. Debug Context
+  - name: 'ubuntu'
+    entrypoint: 'bash'
+    args: ['-c', 'ls -R']
+    id: 'debug-context'
+    waitFor: ['-']
+
+  # 1. Build Backend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/career-guide-488304/sargvision-api', '-f', 'backend/Dockerfile', '.']
+    id: 'build-backend'
+    waitFor: ['-']
+
+  # 2. Build Frontend
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-t'
+      - 'gcr.io/career-guide-488304/sargvision-frontend'
+      - '-f'
+      - 'frontend/Dockerfile'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_URL=https://api.sargvision.ai'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SUPABASE_URL=https://eswejdxrbhasshdxtyeu.supabase.co'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_Pya-Yc-1h2UIs_kdgweblQ_UXVuaTIG'
+      - '.'
+    id: 'build-frontend'
+    waitFor: ['-']
+
+  # 3. Build Kong Gateway
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/career-guide-488304/sargvision-gateway', '-f', 'backend/infra/kong/Dockerfile.kong', '.']
+    id: 'build-gateway'
+    waitFor: ['-']
+
+images:
+  - 'gcr.io/career-guide-488304/sargvision-api'
+  - 'gcr.io/career-guide-488304/sargvision-frontend'
+  - 'gcr.io/career-guide-488304/sargvision-gateway'

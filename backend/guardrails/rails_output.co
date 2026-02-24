@@ -1,0 +1,30 @@
+# ══════════════════════════════════════════════════════════════════════
+# OUTPUT RAILS — applied to every response before returning to the user
+# ══════════════════════════════════════════════════════════════════════
+
+# ── 1. Hallucination / Uncertainty Rail ───────────────────────────────
+define flow check hallucination output
+  $has_hallucination = execute check_output_for_hallucination
+  if $has_hallucination
+    bot provide uncertain response
+
+define bot provide uncertain response
+  "I want to be accurate here — let me search for the most up-to-date information rather than guessing. One moment... 🔍"
+
+# ── 2. Output PII Leak Prevention ─────────────────────────────────────
+define flow check pii leak output
+  $has_pii = execute check_output_for_pii
+  if $has_pii
+    bot refuse pii output
+
+define bot refuse pii output
+  "I noticed I was about to share some sensitive information. For privacy reasons I've stopped that response. Could you rephrase your question so I can help you safely?"
+
+# ── 3. Career Relevance Output Rail ───────────────────────────────────
+define flow check career relevance output
+  $is_off_topic = execute check_output_career_relevance
+  if $is_off_topic
+    bot redirect output to career
+
+define bot redirect output to career
+  "I'm best at career guidance! Let me bring this back to how it applies to your professional journey. What specific career goal are you working towards right now?"

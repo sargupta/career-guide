@@ -1,0 +1,53 @@
+_format_version: "3.0"
+_transform: true
+
+# ═══════════════════════════════════════════════════════════════════
+# SARGVISION AI — Hybrid Defense Kong Configuration
+# ═══════════════════════════════════════════════════════════════════
+
+services:
+  - name: sargvision-backend
+    url: http://backend:8000
+    routes:
+      - name: api-root
+        paths:
+          - /api
+        strip_path: true
+
+  - name: gemini-ai-service
+    host: localhost # Placeholder, ai-proxy plugin will handle routing
+    port: 80
+    plugins:
+      # 🛡️ AI Proxy: Centralise and secure Gemini calls
+      - name: ai-proxy
+        config:
+          route_type: "llm/v1/chat"
+          auth:
+            header_name: "Authorization"
+            header_value: "Bearer ${GOOGLE_API_KEY}"
+          model:
+            provider: "gemini"
+            name: "gemini-2.0-flash"
+
+    routes:
+      - name: ai-chat-route
+        paths:
+          - /v1/chat/completions
+
+plugins:
+  # 🔑 Global Key Auth for the Gateway
+  - name: key-auth
+    config:
+      key_names:
+        - apikey
+
+  # 📈 Prometheus for Observability
+  - name: prometheus
+    config:
+      status_code_metrics: true
+      latency_metrics: true
+
+consumers:
+  - username: default-student
+    keyauth_credentials:
+      - key: "sargvision-secure-key"

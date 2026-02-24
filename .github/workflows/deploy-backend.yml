@@ -1,0 +1,66 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: sargvision-api
+  IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/sargvision-api
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        pip install pytest httpx
+
+    - name: Run Tests
+      env:
+        # Mocking or using Test DB if available
+        SUPABASE_DB_URL: ${{ secrets.TEST_DB_URL }}
+        GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      run: |
+        cd backend
+        python -m pytest tests/
+
+    - name: Google Auth
+      uses: 'google-github-actions/auth@v1'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    - name: Set up Cloud SDK
+      uses: 'google-github-actions/setup-gcloud@v1'
+
+    - name: Configure Docker for GCP
+      run: gcloud auth configure-docker --quiet
+
+    - name: Build and Push Docker Image
+      run: |
+        docker build -t $IMAGE_NAME -f backend/Dockerfile .
+        docker push $IMAGE_NAME
+
+    - name: Deploy to Cloud Run (Declarative)
+      run: |
+        # Substitute variables in service.yaml
+        envsubst < backend/service.yaml > backend/service_resolved.yaml
+        
+        gcloud run services replace backend/service_resolved.yaml \
+          --region $REGION

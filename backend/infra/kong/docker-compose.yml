@@ -1,0 +1,98 @@
+version: "3.9"
+
+services:
+  # 🦍 Kong API Gateway
+  kong:
+    image: kong/kong-gateway:3.9
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000,0.0.0.0:8443 ssl
+      KONG_SSL_CERT: /etc/kong/certs/sargvision.local+4.pem
+      KONG_SSL_CERT_KEY: /etc/kong/certs/sargvision.local+4-key.pem
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      KONG_ROUTER_FLAVOR: traditional_compatible
+    volumes:
+      - /Users/sargupta/career-guide/backend/infra/kong/kong.yml:/etc/kong/kong.yml
+      - /Users/sargupta/career-guide/backend/certs:/etc/kong/certs
+    ports:
+      - "8000:8000" # Proxy
+      - "8001:8001" # Admin API
+      - "8443:8443" # Proxy SSL
+    restart: always
+    depends_on:
+      - redis
+
+  # 🧠 Redis for Semantic Caching
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"
+
+  # 📈 Prometheus for Metrics Scraping
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - /Users/sargupta/career-guide/backend/infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - kong
+
+  # 📊 Grafana for Visualization
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "9091:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - /Users/sargupta/career-guide/backend/infra/monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - /Users/sargupta/career-guide/backend/infra/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+
+  # 🛑 Redis Exporter for Cache Health
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    environment:
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - redis
+
+  # 📦 cAdvisor for Container Resource Monitoring
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0 # Pinning version for stability
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    restart: always
+
+  # 🚀 SARGVISION FastAPI Backend
+  api-backend:
+    build:
+      context: /Users/sargupta/career-guide
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: ${SUPABASE_DB_URL}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+    ports:
+      - "8080:8000"
+    depends_on:
+      - redis
+
+networks:
+  default:
+    name: kong_default

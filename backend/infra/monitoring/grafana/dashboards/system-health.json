@@ -1,0 +1,114 @@
+{
+    "annotations": {
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": "-- Grafana --",
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
+    },
+    "editable": true,
+    "panels": [
+        {
+            "title": "Container CPU Usage (%)",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "expr": "rate(container_cpu_usage_seconds_total{name!=\"\"}[5m]) * 100",
+                    "legendFormat": "{{name}}"
+                }
+            ]
+        },
+        {
+            "title": "Container Memory Usage (MB)",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            },
+            "targets": [
+                {
+                    "expr": "container_memory_usage_bytes{name!=\"\"} / 1024 / 1024",
+                    "legendFormat": "{{name}}"
+                }
+            ]
+        },
+        {
+            "title": "FastAPI HTTP Request Rate (RPS)",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_request_duration_seconds_count[5m])) by (method, handler)",
+                    "legendFormat": "{{method}} {{handler}}"
+                }
+            ]
+        },
+        {
+            "title": "FastAPI P99 Latency (ms)",
+            "type": "timeseries",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler)) * 1000",
+                    "legendFormat": "{{handler}}"
+                }
+            ]
+        },
+        {
+            "title": "Redis Memory Usage",
+            "type": "gauge",
+            "datasource": "Prometheus",
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 8
+            },
+            "targets": [
+                {
+                    "expr": "redis_memory_used_bytes",
+                    "legendFormat": "Used Memory"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "bytes"
+                }
+            }
+        }
+    ],
+    "title": "SARGVISION Deep System Health",
+    "uid": "system_health",
+    "tags": [
+        "sargvision",
+        "ops"
+    ]
+}

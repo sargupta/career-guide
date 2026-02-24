@@ -1,0 +1,12 @@
+# Docker ignore
+.git
+.gemini
+**/node_modules
+**/venv
+**/.pytest_cache
+**/__pycache__
+**/.next
+backend/test.db
+backend/certs
+frontend/.next
+frontend/node_modules
